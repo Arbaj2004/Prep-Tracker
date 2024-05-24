@@ -61,7 +61,7 @@ def register():
                 api_data = response.json()
                 if 'errors' in api_data:
                     # Username does not exist according to the API
-                    flash("Please check your username")
+                    flash("Username does not exist. Please check your username.")
                     return render_template('register.html', form=form, error="Username does not exist.")
                 else:
                     # Proceed with registration as the username does not exist in the API

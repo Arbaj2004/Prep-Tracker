@@ -33,7 +33,7 @@
     </div>
     {% with messages = get_flashed_messages() %}
     {% if messages %}
-        <div class="alert-danger">
+        <div class="alert-warning" style="background: none; padding: -10px;margin: -10px; color: red; font-weight: bolder;">
             <ul>
                 {% for message in messages %}
                 <li>{{ message }}</li>
