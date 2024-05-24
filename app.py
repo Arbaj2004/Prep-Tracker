@@ -1,9 +1,10 @@
-from flask import Flask, render_template, redirect, url_for, session, flash
+from flask import Flask, render_template, redirect, url_for, session, flash,request, jsonify
 from flask_wtf import FlaskForm
 from wtforms import StringField,PasswordField,SubmitField
 from wtforms.validators import DataRequired, Email, ValidationError
 import bcrypt
 from flask_mysqldb import MySQL
+import requests
 
 app = Flask(__name__)
 
@@ -43,26 +44,44 @@ class LoginForm(FlaskForm):
 def index():
     return render_template('index.html')
 
-@app.route('/register',methods=['GET','POST'])
+@app.route('/register', methods=['GET', 'POST'])
 def register():
     form = RegisterForm()
     if form.validate_on_submit():
-        name = form.name.data
         username = form.username.data
+        name = form.name.data
         email = form.email.data
         password = form.password.data
+        
+        # Check the API to see if the username exists
+        api_url = f'https://alfa-leetcode-api.onrender.com/{username}'
+        try:
+            response = requests.get(api_url)
+            if response.status_code == 200:
+                api_data = response.json()
+                if 'errors' in api_data:
+                    # Username does not exist according to the API
+                    flash("Username does not exist. Please check your username.")
+                    return render_template('register.html', form=form, error="Username does not exist.")
+                else:
+                    # Proceed with registration as the username does not exist in the API
+                    hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
 
-        hashed_password = bcrypt.hashpw(password.encode('utf-8'),bcrypt.gensalt())
+                    # Store data into the database
+                    cursor = mysql.connection.cursor()
+                    cursor.execute("INSERT INTO credentials (name, username, email, password) VALUES (%s, %s, %s, %s)",
+                                   (name, username, email, hashed_password))
+                    mysql.connection.commit()
+                    cursor.close()
 
-        # store data into database 
-        cursor = mysql.connection.cursor()
-        cursor.execute("INSERT INTO credentials (name,username,email,password) VALUES (%s,%s,%s,%s)",(name,username,email,hashed_password))
-        mysql.connection.commit()
-        cursor.close()
+                    return redirect(url_for('login'))
+            else:
+                return render_template('register.html', form=form, error="API error: Could not verify username.")
+        except requests.RequestException as e:
+            return render_template('register.html', form=form, error=f"API request failed: {str(e)}")
 
-        return redirect(url_for('login'))
+    return render_template('register.html', form=form)
 
-    return render_template('register.html',form=form)
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -94,7 +113,6 @@ def dashboard():
         cursor.execute("SELECT * FROM credentials where userId=%s",(userId,))
         user = cursor.fetchone()
         cursor.close()
-
         if user:
             return render_template('dashboard.html',user=user)
             
@@ -111,3 +129,6 @@ def logout():
 
 if __name__ == '__main__':
     app.run(debug=True)
+
+
+    # dreamyjpl 1234
