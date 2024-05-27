@@ -114,7 +114,7 @@ def dashboard():
         user = cursor.fetchone()
         cursor.close()
         if user:
-            return render_template('dashboard.html',user=user)
+            return render_template('main.html',user=user)
             
     return redirect(url_for('login'))
 
@@ -124,6 +124,39 @@ def logout():
     flash("You have been logged out successfully.")
     return redirect(url_for('login'))
 
+
+@app.route('/profile')
+def profile():
+    if 'userId' in session:
+        userId = session['userId']
+
+        cursor = mysql.connection.cursor()
+        cursor.execute("SELECT * FROM credentials where userId=%s",(userId,))
+        user = cursor.fetchone()
+        cursor.close()
+        # profile_api = f'https://alfa-leetcode-api.onrender.com/{user[2]}'
+        profile_api = f'https://alfa-leetcode-api.onrender.com/{user[2]}'
+        badges_api = f'https://alfa-leetcode-api.onrender.com/{user[2]}/badges'
+        print(f'https://alfa-leetcode-api.onrender.com/{user[2]}')
+        try:
+            badges=requests.get(badges_api)
+            if badges.status_code == 200:
+                badges_data = badges.json()
+            response = requests.get(profile_api)
+            if response.status_code == 200:
+                api_data = response.json()
+                # if 'errors' in api_data:
+                #     flash("Error in fetching data")
+                #     # print(api_data.errors)
+                #     return render_template('dashboard.html')
+                if user:
+                    print(user[2])
+                    return render_template('profile.html',user=user,response=api_data,badges=badges_data['badges'])
+        except requests.RequestException as e:
+            print("error ❤️❤️❤️❤️❤️");
+            return render_template('profile.html')
+            
+    return redirect(url_for('profile'))
 
 
 
